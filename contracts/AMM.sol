@@ -28,8 +28,32 @@ contract AMM {
         totalSupply -= _amount;
     }
 
-    function swap() external {
+    function _update(uint _reserve0, uint _reseve1) private {
+        reserve0 = _reserve0;
+        reserve1 = _reseve1;
+    }
 
+    function swap(address _tokenIn, uint _amountIn) external returns(uint amountOut) {
+        require(_tokenIn == address(token0) || _tokenIn == address(token1), "Invalid token");
+        require(_amountIn > 0, "amountIn = 0");
+
+        //Pull In token in
+        bool isToken0 = _tokenIn == address(token0);
+        (IERC20 tokenIn, IERC20 tokenOut, uint reserveIn, uint reserveOut) = isToken0
+            ? (token0, token1, reserve0, reserve1)
+            : (token1, token0, reserve1, reserve0);
+
+        tokenIn.transferFrom(msg.sender, address(this), _amountIn);
+
+        //Calc token out and fees, fee 0.3%
+        uint amountInWithFee = (_amountIn * 997) / 1000;
+        amountOut = (reserveOut * amountInWithFee) / (reserveIn + amountInWithFee);
+
+        //Transfer token out to msg.sender
+        tokenOut.transfer(msg.sender, amountOut);
+
+        //Update reserves
+        _update(token0.balanceOf(address(this)), token1.balanceOf(address(this)));
     }
 
     function addLiquidity() external {
@@ -37,6 +61,6 @@ contract AMM {
     }
 
     function removeLiquidity() external {
-        
+
     }
 }
