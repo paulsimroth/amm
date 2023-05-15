@@ -107,7 +107,28 @@ contract AMM {
         _update(token0.balanceOf(address(this)), token1.balanceOf(address(this)));
     }
 
-    function removeLiquidity() external {}
+    function removeLiquidity(uint _shares) external returns (uint amount0, uint amount1){
+        //Calc amount0  and amount1 to withdraw
+        // dx = s / T * x
+        // dy = s / T * y
+        uint bal0 = token0.balanceOf(address(this));
+        uint bal1 = token1.balanceOf(address(this));
+
+        amount0 = (_shares * bal0) / totalSupply;
+        amount1 = (_shares * bal1) / totalSupply;
+
+        require(amount0 > 0 && amount1 > 0, "amount0 or amount1 == 0");
+
+        //Burn shares
+        _burn(msg.sender, _shares);
+
+        //Update reserves
+        _update(bal0 - amount0, bal1 - amount1);
+
+        //Transfer tokens to msg.sender
+        token0.transfer(msg.sender, amount0);
+        token1.transfer(msg.sender, amount1);
+    }
 
     function _sqrt(uint y) private pure returns (uint z) {
         if (y > 3) {
